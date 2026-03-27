@@ -39,10 +39,10 @@ local function GetCurrentEquipmentSet()
     if not setIDs then return nil end
     
     for _, setID in ipairs(setIDs) do
-        local name, iconFileID, isEquipped, numItems, numEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
-        -- isEquipped may return setID (truthy) when equipped, or nil/false
-        -- We verify by checking if numEquipped > 0 and matches the set
-        if isEquipped and numEquipped and numEquipped > 0 then
+        local name, iconFileID, isEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
+        -- In WoW 12.x, isEquipped returns the setID (truthy) when equipped, nil/false otherwise
+        -- The setID return confirms this set is currently equipped
+        if isEquipped == setID then
             return setID, name, iconFileID
         end
     end
@@ -98,9 +98,9 @@ local function EquipmentSetDropDown_Initialize(self, level)
             
             -- Add each set
             for _, setID in ipairs(setIDs) do
-                local name, iconFileID, isEquipped, numItems, numEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
-                -- Check if items are missing by comparing total items vs equipped items
-                local hasMissingItems = numItems and numEquipped and (numEquipped < numItems)
+                local name, iconFileID, isEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
+                -- Check if this set is missing any items by using the IsSetFullyEquipped function
+                local hasMissingItems = not C_EquipmentSet.IsSetFullyEquipped(setID)
                 
                 info = UIDropDownMenu_CreateInfo()
                 
