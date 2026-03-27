@@ -39,10 +39,9 @@ local function GetCurrentEquipmentSet()
     if not setIDs then return nil end
     
     for _, setID in ipairs(setIDs) do
-        local name, iconFileID, isEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
-        -- In WoW 12.x, isEquipped returns the setID (truthy) when equipped, nil/false otherwise
-        -- The setID return confirms this set is currently equipped
-        if isEquipped == setID then
+        local name, iconFileID, _, isEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
+        -- isEquipped is a boolean indicating if all non-ignored slots are equipped
+        if isEquipped then
             return setID, name, iconFileID
         end
     end
@@ -98,9 +97,9 @@ local function EquipmentSetDropDown_Initialize(self, level)
             
             -- Add each set
             for _, setID in ipairs(setIDs) do
-                local name, iconFileID, isEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
-                -- Check if this set is missing any items by using the IsSetFullyEquipped function
-                local hasMissingItems = not C_EquipmentSet.IsSetFullyEquipped(setID)
+                local name, iconFileID, _, _, _, _, _, numLost = C_EquipmentSet.GetEquipmentSetInfo(setID)
+                -- numLost indicates items not available (missing from bags/bank)
+                local hasMissingItems = numLost and numLost > 0
                 
                 info = UIDropDownMenu_CreateInfo()
                 
