@@ -32,13 +32,17 @@ local dataObj = ldb:NewDataObject("Broker_Equipment", {
 })
 
 -- Function to get currently equipped set info
+-- Note: In Retail WoW 12.x, GetEquipmentSetInfo returns different values
+-- We need to check if the set is actually equipped by comparing item counts
 local function GetCurrentEquipmentSet()
     local setIDs = C_EquipmentSet.GetEquipmentSetIDs()
     if not setIDs then return nil end
     
     for _, setID in ipairs(setIDs) do
-        local name, iconFileID, isEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
-        if isEquipped then
+        local name, iconFileID, isEquipped, numItems, numEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
+        -- isEquipped may return setID (truthy) when equipped, or nil/false
+        -- We verify by checking if numEquipped > 0 and matches the set
+        if isEquipped and numEquipped and numEquipped > 0 then
             return setID, name, iconFileID
         end
     end
@@ -90,12 +94,13 @@ local function EquipmentSetDropDown_Initialize(self, level)
             UIDropDownMenu_AddButton(info, level)
             
             -- Get current equipped set for checkmark
-            local currentSetID = GetCurrentEquipmentSet()
+            local currentSetID, _, _ = GetCurrentEquipmentSet()
             
             -- Add each set
             for _, setID in ipairs(setIDs) do
-                local name, iconFileID, isEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
-                local hasMissingItems = C_EquipmentSet.IsMissingEquipmentSetItem(setID)
+                local name, iconFileID, isEquipped, numItems, numEquipped = C_EquipmentSet.GetEquipmentSetInfo(setID)
+                -- Check if items are missing by comparing total items vs equipped items
+                local hasMissingItems = numItems and numEquipped and (numEquipped < numItems)
                 
                 info = UIDropDownMenu_CreateInfo()
                 
