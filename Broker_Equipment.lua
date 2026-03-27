@@ -10,27 +10,6 @@ local ldb = LibStub("LibDataBroker-1.1")
 local DEFAULT_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
 local DEFAULT_TEXT = "No Set"
 
--- Create the LDB data object
-local dataObj = ldb:NewDataObject("Broker_Equipment", {
-	type = "data source",
-	label = "Equipment Set",
-	icon = DEFAULT_ICON,
-	text = DEFAULT_TEXT,
-	OnClick = function(self, button)
-		if button == "LeftButton" then
-			BrokerEquipment_OpenCharacterFrame()
-		elseif button == "RightButton" then
-			BrokerEquipment_ShowDropdown(self)
-		end
-	end,
-	OnTooltipShow = function(tooltip)
-		tooltip:AddLine("Equipment Set")
-		tooltip:AddLine(" ")
-		tooltip:AddLine("Left-click to open Equipment Manager")
-		tooltip:AddLine("Right-click to select equipment set")
-	end,
-})
-
 -- Function to get currently equipped set info
 -- Note: In Retail WoW 12.x, GetEquipmentSetInfo returns different values
 -- We need to check if the set is actually equipped by comparing item counts
@@ -50,6 +29,63 @@ local function GetCurrentEquipmentSet()
 
 	return nil
 end
+
+-- Create the LDB data object
+local dataObj = ldb:NewDataObject("Broker_Equipment", {
+	type = "data source",
+	label = "Equipment Set",
+	icon = DEFAULT_ICON,
+	text = DEFAULT_TEXT,
+	OnClick = function(self, button)
+		if button == "LeftButton" then
+			BrokerEquipment_OpenCharacterFrame()
+		elseif button == "RightButton" then
+			BrokerEquipment_ShowDropdown(self)
+		end
+	end,
+	OnTooltipShow = function(tooltip)
+		tooltip:AddLine("Equipment Set")
+		tooltip:AddLine(" ")
+		tooltip:AddLine("Left-click to open Equipment Manager")
+		tooltip:AddLine("Right-click to select equipment set")
+		tooltip:AddLine(" ")
+		
+		-- Get all equipment sets
+		local setIDs = C_EquipmentSet.GetEquipmentSetIDs()
+		local currentSetID = GetCurrentEquipmentSet()
+		
+		if setIDs and #setIDs > 0 then
+			tooltip:AddLine("Available Sets:")
+			for _, setID in ipairs(setIDs) do
+				local name, iconFileID, _, isEquipped, _, _, _, numLost = C_EquipmentSet.GetEquipmentSetInfo(setID)
+				local hasMissingItems = numLost and numLost > 0
+				local isCurrentlyEquipped = (currentSetID == setID)
+				
+				-- Build the display text with icon texture escape sequence
+				local iconString = ""
+				if iconFileID then
+					iconString = "|T" .. iconFileID .. ":14:14:0:0|t "
+				end
+				
+				local displayText
+				if isCurrentlyEquipped then
+					-- Green for equipped
+					displayText = iconString .. "|cFF00FF00" .. name .. "|r"
+				elseif hasMissingItems then
+					-- Red for missing items with count
+					displayText = iconString .. "|cFFFF0000" .. name .. " (" .. numLost .. ")|r"
+				else
+					-- White for available
+					displayText = iconString .. "|cFFFFFFFF" .. name .. "|r"
+				end
+				
+				tooltip:AddLine(displayText)
+			end
+		else
+			tooltip:AddLine("No equipment sets available")
+		end
+	end,
+})
 
 -- Function to update broker display
 local function UpdateBrokerDisplay()
@@ -164,10 +200,22 @@ function BrokerEquipment_ShowDropdown(clickedFrame)
 	ToggleDropDownMenu(1, nil, dropdownFrame, BrokerEquipment_CursorAnchor, 0, 0)
 	
 	-- Force the menu to position at cursor - ToggleDropDownMenu doesn't honor our anchor
+	-- Offset by 3 units right and 3 units down from cursor
 	local ddl = _G["DropDownList1"]
 	if ddl then
 		ddl:ClearAllPoints()
-		ddl:SetPoint("TOPLEFT", BrokerEquipment_CursorAnchor, "CENTER", 0, 0)
+		ddl:SetPoint("TOPLEFT", BrokerEquipment_CursorAnchor, "CENTER", 3, -3)
+		
+		-- Increase font size of all dropdown buttons
+		for i = 1, UIDROPDOWNMENU_MAXBUTTONS or 8 do
+			local button = _G["DropDownList1Button" .. i]
+			if button and button.NormalText then
+				local font, size, flags = button.NormalText:GetFont()
+				if font then
+					button.NormalText:SetFont(font, size + 2, flags)
+				end
+			end
+		end
 	end
 end
 
