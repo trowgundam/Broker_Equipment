@@ -105,15 +105,19 @@ local function EquipmentSetDropDown_Initialize(self, level)
 
 				info = UIDropDownMenu_CreateInfo()
 
-				-- Set name in red if missing items
-				if hasMissingItems then
+				-- Set name in red if missing items, or green checkmark if equipped
+				if currentSetID == setID then
+					info.text = "|cFF00FF00" .. name .. "|r"
+					info.checked = true
+				elseif hasMissingItems then
 					info.text = "|cFFFF0000" .. name .. "|r"
+					info.checked = false
 				else
 					info.text = name
+					info.checked = false
 				end
 
 				info.icon = iconFileID
-				info.checked = (currentSetID == setID)
 				info.func = function()
 					C_EquipmentSet.UseEquipmentSet(setID)
 				end
@@ -135,10 +139,75 @@ end
 -- Create and configure dropdown menu
 local dropdownFrame = CreateFrame("Frame", "BrokerEquipmentDropDown", UIParent, "UIDropDownMenuTemplate")
 
--- Function to show the dropdown menu
-function BrokerEquipment_ShowDropdown(parentFrame)
+-- Function to show the dropdown menu at cursor
+function BrokerEquipment_ShowDropdown(clickedFrame)
+	-- Get cursor position
+	local cursorX, cursorY = GetCursorPosition()
+	local scale = UIParent:GetEffectiveScale()
+	local scaledX = cursorX / scale
+	local scaledY = cursorY / scale
+	
+	print("BrokerEquipment: Cursor at X:", scaledX, "Y:", scaledY)
+	
+	-- Create anchor frame at cursor
+	if not BrokerEquipment_CursorAnchor then
+		BrokerEquipment_CursorAnchor = CreateFrame("Frame", nil, UIParent)
+		BrokerEquipment_CursorAnchor:SetWidth(10)
+		BrokerEquipment_CursorAnchor:SetHeight(10)
+		-- Make it visible for debugging
+		local bg = BrokerEquipment_CursorAnchor:CreateTexture(nil, "BACKGROUND")
+		bg:SetAllPoints()
+		bg:SetColorTexture(1, 0, 0, 0.5) -- Red, semi-transparent
+	end
+	
+	-- Position at cursor
+	BrokerEquipment_CursorAnchor:ClearAllPoints()
+	BrokerEquipment_CursorAnchor:SetPoint("CENTER", UIParent, "BOTTOMLEFT", scaledX, scaledY)
+	BrokerEquipment_CursorAnchor:Show()
+	
+	-- Debug: print where the anchor actually is
+	print("  Anchor Left:", BrokerEquipment_CursorAnchor:GetLeft())
+	print("  Anchor Top:", BrokerEquipment_CursorAnchor:GetTop())
+	
+	-- Debug: Check DropDownList1 (the actual menu frame that gets shown)
+	local list = _G["DropDownList1"]
+	if list then
+		list:HookScript("OnShow", function(self)
+			print("  === DROPDOWN LIST SHOWN ===")
+			print("    List Left:", self:GetLeft())
+			print("    List Top:", self:GetTop())
+			
+			-- Get anchor info
+			local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint(1)
+			if point then
+				print("    List Anchor point:", point)
+				print("    List Anchor relativeTo:", relativeTo and relativeTo:GetName() or "nil")
+				print("    List Anchor relativePoint:", relativePoint)
+				print("    List Anchor xOfs:", xOfs)
+				print("    List Anchor yOfs:", yOfs)
+			end
+			
+			-- Print all points
+			for i = 1, self:GetNumPoints() do
+				local p, rt, rp, xo, yo = self:GetPoint(i)
+				print("    Point", i, ":", p, "relative to", rt and rt:GetName() or "nil", rp, xo, yo)
+			end
+		end)
+	end
+	
+	-- Initialize and show menu relative to anchor
 	UIDropDownMenu_Initialize(dropdownFrame, EquipmentSetDropDown_Initialize, "MENU")
-	ToggleDropDownMenu(1, nil, dropdownFrame, "cursor", 3, -3)
+	ToggleDropDownMenu(1, nil, dropdownFrame, BrokerEquipment_CursorAnchor, 0, 0)
+	
+	-- Force the menu to position correctly - ToggleDropDownMenu doesn't honor our anchor
+	local ddl = _G["DropDownList1"]
+	if ddl then
+		print("  Forcing position to anchor location")
+		ddl:ClearAllPoints()
+		ddl:SetPoint("TOPLEFT", BrokerEquipment_CursorAnchor, "CENTER", 0, 0)
+		print("  Set DDL point to anchor center")
+		print("  DDL now at Left:", ddl:GetLeft(), "Top:", ddl:GetTop())
+	end
 end
 
 -- Event handling
