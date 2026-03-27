@@ -136,7 +136,7 @@ local dropdownFrame = CreateFrame("Frame", "BrokerEquipmentDropDown", UIParent, 
 -- Function to show the dropdown menu
 function BrokerEquipment_ShowDropdown(parentFrame)
     UIDropDownMenu_Initialize(dropdownFrame, EquipmentSetDropDown_Initialize, "MENU")
-    ToggleDropDownMenu(1, nil, dropdownFrame, "CursorPosition", 0, 0)
+    ToggleDropDownMenu(1, nil, dropdownFrame, parentFrame, 0, 0)
 end
 
 -- Event handling
