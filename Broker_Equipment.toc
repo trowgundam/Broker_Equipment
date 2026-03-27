@@ -1,0 +1,8 @@
+## Interface: 120001
+## Title: Broker Equipment
+## Notes: Shows current Equipment Manager set with click actions
+## Author: User
+## Version: 1.0.0
+
+Libs/LibDataBroker-1.1/LibDataBroker-1.1.lua
+Broker_Equipment.lua
